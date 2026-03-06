@@ -21,6 +21,7 @@ body {
   min-height: 100vh;
   display: flex;
   justify-content: center;
+  overflow-x: hidden;
 }
 
 .app {
@@ -28,7 +29,8 @@ body {
   flex-direction: column;
   min-height: 100vh;
   width: var(--app-width, 100%);
-  max-width: 540px;
+  min-width: var(--app-width, 100%);
+  max-width: var(--app-width, 100%);
 }
 
 .topbar {
@@ -54,7 +56,7 @@ body {
 .screen {
   flex: 1;
   display: grid;
-  grid-template-rows: 1fr auto;
+  grid-template-rows: 220px 320px;
   gap: 12px;
   padding: 16px;
 }
