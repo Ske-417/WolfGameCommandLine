@@ -80,8 +80,9 @@
     <div class="card">
       <h2>夜の行動</h2>
       <div id="nightStep" class="hint"></div>
+      <div id="countdown" class="countdown"></div>
       <div id="choiceList" class="choices"></div>
-      <button id="skipBtn" class="ghost">スキップ</button>
+      <button id="skipBtn" class="ghost">次へ</button>
     </div>
   </template>
 
@@ -99,6 +100,7 @@
   <template id="voteTemplate">
     <div class="card">
       <h2>投票</h2>
+      <p id="voterLabel" class="hint"></p>
       <p class="hint">処刑するプレイヤーを1人選んでください。</p>
       <div id="voteList" class="choices"></div>
     </div>

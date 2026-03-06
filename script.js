@@ -75,6 +75,7 @@ const assignRoles = (players, config) => {
 
 const alivePlayers = () => state.players.filter((p) => p.alive);
 const aliveByRole = (role) => alivePlayers().filter((p) => p.role === role);
+const getPlayerById = (id) => state.players.find((p) => p.id === id);
 
 const winCheck = () => {
   const wolves = aliveByRole("wolf").length;
@@ -175,20 +176,81 @@ const renderReveal = () => {
 };
 
 const startNight = () => {
-  state.pending = { wolfTarget: null, seerTarget: null, guardTarget: null };
+  state.pending = { wolfTarget: null, seerTargets: [], guardTarget: null };
   state.lastNight = "";
+  state.nightOrder = alivePlayers().map((p) => p.id);
+  state.nightIndex = 0;
   addLog(`夜${state.night} が始まる。`);
-  renderNightStep("wolf");
+  renderNightTurn();
 };
 
-const renderNightStep = (roleKey) => {
-  const rolePlayers = aliveByRole(roleKey);
-  if (rolePlayers.length === 0) {
-    if (roleKey === "wolf") return renderNightStep("seer");
-    if (roleKey === "seer") return renderNightStep("guard");
-    if (roleKey === "guard") return resolveNight();
+const renderNightTurn = () => {
+  if (state.nightIndex >= state.nightOrder.length) {
+    return resolveNight();
   }
+  clearPanel();
+  mount(templates.night);
+  setPhase("NIGHT", `夜${state.night}`);
 
+  const nightStep = document.getElementById("nightStep");
+  const choiceList = document.getElementById("choiceList");
+  const skipBtn = document.getElementById("skipBtn");
+  const countdown = document.getElementById("countdown");
+
+  const currentId = state.nightOrder[state.nightIndex];
+  const current = getPlayerById(currentId);
+
+  nightStep.textContent = `${current.name} の番。役職がある人は選んでね。`;
+  countdown.textContent = "";
+  skipBtn.style.display = "none";
+
+  const roleOptions = [];
+  if (state.config.wolf > 0) roleOptions.push("wolf");
+  if (state.config.seer > 0) roleOptions.push("seer");
+  if (state.config.guard > 0) roleOptions.push("guard");
+  roleOptions.push("none");
+
+  roleOptions.forEach((roleKey) => {
+    const btn = document.createElement("button");
+    btn.className = "choice-btn";
+    btn.textContent = roleKey === "none" ? "役職なし" : roles[roleKey].name;
+    btn.addEventListener("click", () => {
+      if (!current.alive) {
+        addLog("脱落者は行動できない。");
+        return advanceNightTurn();
+      }
+      if (roleKey === "none" || current.role !== roleKey) {
+        return startAutoNext(countdown, skipBtn, advanceNightTurn);
+      }
+      renderNightAction(current, roleKey);
+    });
+    choiceList.appendChild(btn);
+  });
+};
+
+const startAutoNext = (countdownEl, buttonEl, onNext) => {
+  let left = 15;
+  buttonEl.style.display = "inline-flex";
+  buttonEl.textContent = "次へ";
+  const update = () => {
+    countdownEl.textContent = `${left}秒後に自動で次へ進みます。`;
+    if (left <= 0) {
+      clearInterval(timerId);
+      onNext();
+    }
+  };
+  update();
+  const timerId = setInterval(() => {
+    left -= 1;
+    update();
+  }, 1000);
+  buttonEl.onclick = () => {
+    clearInterval(timerId);
+    onNext();
+  };
+};
+
+const renderNightAction = (current, roleKey) => {
   clearPanel();
   mount(templates.night);
   setPhase("NIGHT", `${roles[roleKey].name}の行動`);
@@ -196,32 +258,41 @@ const renderNightStep = (roleKey) => {
   const nightStep = document.getElementById("nightStep");
   const choiceList = document.getElementById("choiceList");
   const skipBtn = document.getElementById("skipBtn");
+  const countdown = document.getElementById("countdown");
 
-  nightStep.textContent = `${roles[roleKey].name}が対象を選ぶ。端末を回してね。`;
+  nightStep.textContent = `${current.name} が対象を選ぶ。`;
+  countdown.textContent = "";
+  skipBtn.style.display = "inline-flex";
+  skipBtn.textContent = "次へ";
 
-  const candidates = alivePlayers().filter((p) => p.role !== (roleKey === "wolf" ? "wolf" : "none"));
+  const candidates = alivePlayers().filter((p) => {
+    if (roleKey === "wolf") return p.role !== "wolf";
+    return true;
+  });
+
   candidates.forEach((p) => {
     const btn = document.createElement("button");
     btn.className = "choice-btn";
     btn.textContent = p.name;
     btn.addEventListener("click", () => {
       if (roleKey === "wolf") state.pending.wolfTarget = p.id;
-      if (roleKey === "seer") state.pending.seerTarget = p.id;
+      if (roleKey === "seer") state.pending.seerTargets.push(p.id);
       if (roleKey === "guard") state.pending.guardTarget = p.id;
-      addLog(`${roles[roleKey].name}が${p.name}を選択。`);
-      if (roleKey === "wolf") return renderNightStep("seer");
-      if (roleKey === "seer") return renderNightStep("guard");
-      return resolveNight();
+      addLog("夜の行動が記録された。");
+      advanceNightTurn();
     });
     choiceList.appendChild(btn);
   });
 
   skipBtn.addEventListener("click", () => {
-    addLog(`${roles[roleKey].name}がスキップ。`);
-    if (roleKey === "wolf") return renderNightStep("seer");
-    if (roleKey === "seer") return renderNightStep("guard");
-    return resolveNight();
+    addLog("夜の行動をスキップ。");
+    advanceNightTurn();
   });
+};
+
+const advanceNightTurn = () => {
+  state.nightIndex += 1;
+  renderNightTurn();
 };
 
 const resolveNight = () => {
@@ -239,11 +310,13 @@ const resolveNight = () => {
     state.lastNight = "静かな夜が明けた。";
   }
 
-  if (state.pending.seerTarget) {
-    const target = state.players.find((p) => p.id === state.pending.seerTarget);
-    if (target) {
-      addLog(`占い結果: ${target.name} は ${roles[target.role].name}。`);
-    }
+  if (state.pending.seerTargets.length > 0) {
+    state.pending.seerTargets.forEach((targetId) => {
+      const target = getPlayerById(targetId);
+      if (target) {
+        addLog(`占い結果: ${target.name} は ${roles[target.role].name}。`);
+      }
+    });
   }
 
   const winner = winCheck();
@@ -274,34 +347,80 @@ const renderDay = () => {
     }
   };
   const timerId = setInterval(tick, 1000);
+  startVoteBtn.disabled = true;
+  startVoteBtn.textContent = "議論中...";
 
   startVoteBtn.addEventListener("click", () => {
     clearInterval(timerId);
-    renderVote();
+    startVotePhase();
   });
 };
 
-const renderVote = () => {
+const startVotePhase = () => {
+  state.votes = {};
+  state.voteOrder = alivePlayers().map((p) => p.id);
+  state.voteIndex = 0;
+  renderVoteTurn();
+};
+
+const renderVoteTurn = () => {
+  if (state.voteIndex >= state.voteOrder.length) {
+    return resolveVote();
+  }
   clearPanel();
   mount(templates.vote);
   setPhase("VOTE", "投票中");
 
+  const voterLabel = document.getElementById("voterLabel");
   const voteList = document.getElementById("voteList");
-  alivePlayers().forEach((p) => {
+  const currentId = state.voteOrder[state.voteIndex];
+  const current = getPlayerById(currentId);
+  voterLabel.textContent = `${current.name} の投票`;
+
+  alivePlayers()
+    .filter((p) => p.id !== currentId)
+    .forEach((p) => {
     const btn = document.createElement("button");
     btn.className = "choice-btn danger";
     btn.textContent = p.name;
     btn.addEventListener("click", () => {
-      p.alive = false;
-      state.lastVote = `${p.name} が処刑された。`;
-      addLog(state.lastVote);
-      const winner = winCheck();
-      if (winner) return renderEnd(winner);
-      state.night += 1;
-      startNight();
+      state.votes[p.id] = (state.votes[p.id] || 0) + 1;
+      addLog("投票が記録された。");
+      state.voteIndex += 1;
+      renderVoteTurn();
     });
     voteList.appendChild(btn);
   });
+};
+
+const resolveVote = () => {
+  const entries = Object.entries(state.votes);
+  if (entries.length === 0) {
+    state.lastVote = "投票がありませんでした。";
+    addLog(state.lastVote);
+    state.night += 1;
+    return startNight();
+  }
+
+  const maxVotes = Math.max(...entries.map(([, count]) => count));
+  const top = entries.filter(([, count]) => count === maxVotes);
+  if (top.length !== 1) {
+    state.lastVote = "同票のため処刑なし。";
+    addLog(state.lastVote);
+  } else {
+    const [playerId] = top[0];
+    const target = getPlayerById(Number(playerId));
+    if (target) {
+      target.alive = false;
+      state.lastVote = `${target.name} が処刑された。`;
+      addLog(state.lastVote);
+    }
+  }
+
+  const winner = winCheck();
+  if (winner) return renderEnd(winner);
+  state.night += 1;
+  startNight();
 };
 
 const renderEnd = (winner) => {
