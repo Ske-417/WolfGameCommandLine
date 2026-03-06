@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WolfGameCommandLine</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="title">
+        <span class="prompt">$</span> WolfGameCommandLine
+      </div>
+      <button id="resetBtn" class="ghost">リセット</button>
+    </header>
+
+    <main class="screen">
+      <section class="console" aria-live="polite">
+        <div id="log" class="log"></div>
+        <div class="cursor" aria-hidden="true">▌</div>
+      </section>
+
+      <section class="panel" id="panel"></section>
+    </main>
+
+    <footer class="footer">
+      <div class="status" id="status">待機中</div>
+      <div class="phase" id="phase">SETUP</div>
+    </footer>
+  </div>
+
+  <template id="setupTemplate">
+    <div class="card">
+      <h2>セットアップ</h2>
+      <p class="hint">スマホ1台で回しながら遊べるUIです。文字入力は不要。</p>
+      <label class="field">
+        <span>プレイヤー人数</span>
+        <input id="playerCount" type="number" min="4" max="12" value="6" />
+      </label>
+
+      <div class="grid">
+        <label class="field">
+          <span>人狼</span>
+          <input id="wolfCount" type="number" min="1" max="4" value="2" />
+        </label>
+        <label class="field">
+          <span>占い師</span>
+          <input id="seerCount" type="number" min="0" max="2" value="1" />
+        </label>
+        <label class="field">
+          <span>騎士</span>
+          <input id="guardCount" type="number" min="0" max="2" value="1" />
+        </label>
+      </div>
+
+      <button id="startBtn" class="primary">ゲーム開始</button>
+      <p class="note">残りは村人で自動配分</p>
+    </div>
+  </template>
+
+  <template id="passTemplate">
+    <div class="card">
+      <h2>デバイスを回してね</h2>
+      <p class="hint">プレイヤー <span id="playerIndex"></span> に渡してください。</p>
+      <button id="revealBtn" class="primary">役職を見る</button>
+    </div>
+  </template>
+
+  <template id="revealTemplate">
+    <div class="card reveal">
+      <h2>あなたの役職</h2>
+      <div id="roleName" class="role"></div>
+      <p id="roleDesc" class="hint"></p>
+      <button id="hideBtn" class="primary">隠して次へ</button>
+    </div>
+  </template>
+
+  <template id="nightTemplate">
+    <div class="card">
+      <h2>夜の行動</h2>
+      <div id="nightStep" class="hint"></div>
+      <div id="choiceList" class="choices"></div>
+      <button id="skipBtn" class="ghost">スキップ</button>
+    </div>
+  </template>
+
+  <template id="dayTemplate">
+    <div class="card">
+      <h2>昼フェーズ</h2>
+      <p id="dayResult" class="hint"></p>
+      <div class="timer">
+        <div class="timer-bar" id="timerBar"></div>
+      </div>
+      <button id="startVoteBtn" class="primary">投票へ進む</button>
+    </div>
+  </template>
+
+  <template id="voteTemplate">
+    <div class="card">
+      <h2>投票</h2>
+      <p class="hint">処刑するプレイヤーを1人選んでください。</p>
+      <div id="voteList" class="choices"></div>
+    </div>
+  </template>
+
+  <template id="endTemplate">
+    <div class="card end">
+      <h2 id="endTitle"></h2>
+      <p id="endDesc" class="hint"></p>
+      <button id="restartBtn" class="primary">もう一回</button>
+    </div>
+  </template>
+
+  <script src="script.js"></script>
+</body>
+</html>
