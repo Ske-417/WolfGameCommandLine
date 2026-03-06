@@ -19,12 +19,16 @@ body {
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
+  display: flex;
+  justify-content: center;
 }
 
 .app {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  width: var(--app-width, 100%);
+  max-width: 540px;
 }
 
 .topbar {
@@ -77,11 +81,7 @@ body {
 }
 
 .cursor {
-  position: absolute;
-  bottom: 12px;
-  left: 16px;
-  color: var(--accent);
-  animation: blink 1.2s step-end infinite;
+  display: none;
 }
 
 @keyframes blink {

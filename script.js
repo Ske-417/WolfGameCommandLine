@@ -4,6 +4,14 @@ const statusEl = document.getElementById("status");
 const phaseEl = document.getElementById("phase");
 const resetBtn = document.getElementById("resetBtn");
 
+const lockAppWidth = () => {
+  const maxWidth = 540;
+  const width = Math.min(window.innerWidth, maxWidth);
+  document.documentElement.style.setProperty("--app-width", `${width}px`);
+};
+
+lockAppWidth();
+
 const templates = {
   setup: document.getElementById("setupTemplate"),
   pass: document.getElementById("passTemplate"),
@@ -200,43 +208,34 @@ const renderNightTurn = () => {
   const currentId = state.nightOrder[state.nightIndex];
   const current = getPlayerById(currentId);
 
-  nightStep.textContent = `${current.name} の番。役職がある人は選んでね。`;
+  nightStep.textContent = `${current.name} の番。`;
   countdown.textContent = "";
   skipBtn.style.display = "none";
 
-  const roleOptions = [];
-  if (state.config.wolf > 0) roleOptions.push("wolf");
-  if (state.config.seer > 0) roleOptions.push("seer");
-  if (state.config.guard > 0) roleOptions.push("guard");
-  roleOptions.push("none");
+  if (!current.alive) {
+    addLog("脱落者は行動なし。");
+    return renderNightWait(countdown, skipBtn);
+  }
 
-  roleOptions.forEach((roleKey) => {
-    const btn = document.createElement("button");
-    btn.className = "choice-btn";
-    btn.textContent = roleKey === "none" ? "役職なし" : roles[roleKey].name;
-    btn.addEventListener("click", () => {
-      if (!current.alive) {
-        addLog("脱落者は行動できない。");
-        return advanceNightTurn();
-      }
-      if (roleKey === "none" || current.role !== roleKey) {
-        return startAutoNext(countdown, skipBtn, advanceNightTurn);
-      }
-      renderNightAction(current, roleKey);
-    });
-    choiceList.appendChild(btn);
-  });
+  if (current.role === "wolf" || current.role === "seer" || current.role === "guard") {
+    return renderNightAction(current, current.role);
+  }
+
+  return renderNightWait(countdown, skipBtn);
 };
 
-const startAutoNext = (countdownEl, buttonEl, onNext) => {
-  let left = 15;
+const renderNightWait = (countdownEl, buttonEl) => {
+  countdownEl.textContent = "待機中...";
   buttonEl.style.display = "inline-flex";
   buttonEl.textContent = "次へ";
+  buttonEl.disabled = true;
+
+  let left = 15;
   const update = () => {
-    countdownEl.textContent = `${left}秒後に自動で次へ進みます。`;
+    countdownEl.textContent = `${left}秒後に次へ進めます。`;
     if (left <= 0) {
       clearInterval(timerId);
-      onNext();
+      buttonEl.disabled = false;
     }
   };
   update();
@@ -245,8 +244,9 @@ const startAutoNext = (countdownEl, buttonEl, onNext) => {
     update();
   }, 1000);
   buttonEl.onclick = () => {
+    if (buttonEl.disabled) return;
     clearInterval(timerId);
-    onNext();
+    advanceNightTurn();
   };
 };
 
@@ -264,6 +264,7 @@ const renderNightAction = (current, roleKey) => {
   countdown.textContent = "";
   skipBtn.style.display = "inline-flex";
   skipBtn.textContent = "次へ";
+  skipBtn.disabled = false;
 
   const candidates = alivePlayers().filter((p) => {
     if (roleKey === "wolf") return p.role !== "wolf";
