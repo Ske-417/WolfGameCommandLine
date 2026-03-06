@@ -91,7 +91,13 @@ body {
 }
 
 .panel {
-  min-height: 240px;
+  height: 320px;
+  overflow: hidden;
+}
+
+.panel .card {
+  height: 100%;
+  overflow-y: auto;
 }
 
 .card {
@@ -129,6 +135,24 @@ h2 {
   margin: 0;
   color: var(--muted);
   font-size: 12px;
+}
+
+details {
+  border: 1px solid rgba(60, 255, 138, 0.2);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #0b120f;
+}
+
+summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+summary::-webkit-details-marker {
+  display: none;
 }
 
 .role {
